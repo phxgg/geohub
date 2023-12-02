@@ -19,6 +19,7 @@ const createLobby = async (req: NextApiRequest, res: NextApiResponse) => {
     mode: 'standard',
     gameSettings,
     locations,
+    players: [],
     state: 'waiting',
   }
 
