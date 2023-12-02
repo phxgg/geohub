@@ -44,7 +44,12 @@ const GameSettingsModal: FC<Props> = ({ isOpen, closeModal, mapDetails, gameMode
   const dispatch = useAppDispatch()
 
   const handleCancelButton = () => {
-    showChallengeView ? setShowChallengeView(false) : closeModal()
+    if (showChallengeView || showLobbyView) {
+      setShowChallengeView(false)
+      setShowLobbyView(false)
+    } else {
+      closeModal()
+    }
   }
 
   const handleActionButton = async () => {
