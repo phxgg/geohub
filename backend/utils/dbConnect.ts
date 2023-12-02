@@ -6,6 +6,7 @@ export const collections: {
   users?: Collection
   games?: Collection
   challenges?: Collection
+  onlineLobbies?: Collection
   maps?: Collection
   mapLikes?: Collection
   locations?: Collection
@@ -39,6 +40,7 @@ export const dbConnect = async () => {
     collections.users = db.collection('users')
     collections.games = db.collection('games')
     collections.challenges = db.collection('challenges')
+    collections.onlineLobbies = db.collection('onlineLobbies')
     collections.maps = db.collection('maps')
     collections.mapLikes = db.collection('mapLikes')
     collections.locations = db.collection('locations')

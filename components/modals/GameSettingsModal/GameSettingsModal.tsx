@@ -2,7 +2,7 @@ import { useRouter } from 'next/router'
 import { FC, useState } from 'react'
 import { Avatar, Checkbox, Slider, ToggleSwitch } from '@components/system'
 import { TextWithLinks } from '@components/TextWithLinks'
-import { UserGroupIcon, UserIcon } from '@heroicons/react/outline'
+import { UserGroupIcon, UserIcon, GlobeIcon } from '@heroicons/react/outline'
 import { useAppDispatch, useAppSelector } from '@redux/hook'
 import { resetGameSettings, updateGameSettings, updateStartTime } from '@redux/slices'
 import { GameSettingsType, GameType, MapType, UserType } from '@types'
@@ -10,6 +10,7 @@ import { formatTimeLimit, mailman, showToast } from '@utils/helpers'
 import { MainModal } from '../MainModal'
 import { StyledGameSettingsModal } from './'
 import { Challenge } from './Challenge'
+import { OnlineLobby } from '@components/modals/GameSettingsModal/OnlineLobby'
 
 type Props = {
   isOpen: boolean
@@ -23,18 +24,20 @@ const GameSettingsModal: FC<Props> = ({ isOpen, closeModal, mapDetails, gameMode
 
   const [showDetailedChecked, setShowDetailedChecked] = useState(
     typeof user.gameSettings === 'undefined' ||
-      (user.gameSettings?.canMove &&
-        user.gameSettings?.canPan &&
-        user.gameSettings?.canZoom &&
-        user.gameSettings?.timeLimit === 0)
+    (user.gameSettings?.canMove &&
+      user.gameSettings?.canPan &&
+      user.gameSettings?.canZoom &&
+      user.gameSettings?.timeLimit === 0)
   )
   const [canMove, setCanMove] = useState(user.gameSettings?.canMove ?? true)
   const [canPan, setCanPan] = useState(user.gameSettings?.canPan ?? true)
   const [canZoom, setCanZoom] = useState(user.gameSettings?.canZoom ?? true)
-  const [gameType, setGameType] = useState<'Single Player' | 'Challenge'>('Single Player')
+  const [gameType, setGameType] = useState<'Single Player' | 'Challenge' | 'Online Lobby'>('Single Player')
   const [showChallengeView, setShowChallengeView] = useState(false)
+  const [showLobbyView, setShowLobbyView] = useState(false)
   const [sliderVal, setSliderVal] = useState(user.gameSettings?.timeLimit ?? 0)
   const [challengeId, setChallengeId] = useState('')
+  const [onlineLobbyId, setOnlineLobbyId] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const router = useRouter()
 
@@ -65,6 +68,50 @@ const GameSettingsModal: FC<Props> = ({ isOpen, closeModal, mapDetails, gameMode
 
       router.push(`/challenge/${challengeId}`)
     }
+
+    // Case 4: Online Lobby & Invite Friends
+    if (gameType === 'Online Lobby' && !showLobbyView) {
+      await createLobby();
+      setShowLobbyView(true)
+    }
+
+    // Case 5: Online Lobby & Start
+    if (gameType === 'Online Lobby' && showLobbyView) {
+      setIsSubmitting(true)
+
+      // store game settings
+      dispatch(updateGameSettings({ gameSettings: { canMove, canPan, canZoom, timeLimit: sliderVal } }))
+
+      router.push(`/online-lobby/${onlineLobbyId}`)
+    }
+  }
+
+  const createLobby = async () => {
+    if (!user.id) {
+      return router.push('/register')
+    }
+
+    setIsSubmitting(true)
+
+    const gameSettings: GameSettingsType = {
+      timeLimit: sliderVal * 10,
+      canMove,
+      canPan,
+      canZoom,
+    }
+
+    const gameData = {
+      mapId: mapDetails._id,
+      mapName: mapDetails.name,
+      gameSettings,
+      mode: 'standard',
+      userId: user.id,
+    }
+
+    const res = await mailman('online-lobbies', 'POST', JSON.stringify(gameData))
+
+    setIsSubmitting(false)
+    setOnlineLobbyId(res)
   }
 
   const createChallenge = async () => {
@@ -149,11 +196,35 @@ const GameSettingsModal: FC<Props> = ({ isOpen, closeModal, mapDetails, gameMode
     }
   }
 
+  const modalTitle = () => {
+    if (gameType === 'Single Player') {
+      return 'Start Game'
+    } else if (gameType === 'Challenge') {
+      return showChallengeView ? 'Start Challenge' : 'Invite Friends'
+    } else if (gameType === 'Online Lobby') {
+      return showLobbyView ? 'Start Online Lobby' : 'Invite Friends'
+    }
+  }
+
+  const actionButtonText = () => {
+    if (gameType === 'Single Player') {
+      return 'Start'
+    } else if (gameType === 'Challenge') {
+      return showChallengeView ? 'Start' : 'Invite'
+    } else if (gameType === 'Online Lobby') {
+      return showLobbyView ? 'Start' : 'Invite'
+    }
+  }
+
+  const cancelButtonText = () => {
+    return showLobbyView || showChallengeView ? 'Back' : 'Cancel'
+  }
+
   return (
     <MainModal
-      title={showChallengeView ? 'Start Challenge' : 'Start Game'}
-      actionButtonText={gameType === 'Single Player' ? 'Start' : showChallengeView ? 'Start' : 'Invite'}
-      cancelButtonText={showChallengeView ? 'Back' : 'Cancel'}
+      title={modalTitle() || ''}
+      actionButtonText={actionButtonText()}
+      cancelButtonText={cancelButtonText()}
       isOpen={isOpen}
       onClose={closeModal}
       onCancel={handleCancelButton}
@@ -162,9 +233,13 @@ const GameSettingsModal: FC<Props> = ({ isOpen, closeModal, mapDetails, gameMode
     >
       <StyledGameSettingsModal>
         <div className="mainContent">
-          {showChallengeView ? (
+          {showChallengeView && (
             <Challenge challengeId={challengeId} />
-          ) : (
+          )}
+          {showLobbyView && (
+            <OnlineLobby lobbyId={onlineLobbyId} />
+          )}
+          {!showChallengeView && !showLobbyView && (
             <>
               <div className="map-details-wrapper">
                 <Avatar type="map" src={mapDetails.previewImg} size={50} />
@@ -198,6 +273,18 @@ const GameSettingsModal: FC<Props> = ({ isOpen, closeModal, mapDetails, gameMode
                       <UserGroupIcon />
                     </div>
                     <span className="toggleText">Challenge</span>
+                  </div>
+                </div>
+
+                <div
+                  className={`toggleItemWrapper ${gameType === 'Online Lobby' ? 'active' : ''}`}
+                  onClick={() => setGameType('Online Lobby')}
+                >
+                  <div className="toggle-item">
+                    <div className="toggleIcon">
+                      <GlobeIcon />
+                    </div>
+                    <span className="toggleText">Online Lobby</span>
                   </div>
                 </div>
               </div>

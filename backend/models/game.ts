@@ -5,7 +5,7 @@ import User from './user'
 type Game = {
   id?: ObjectId
   _id?: ObjectId // replace id with _id throughout app
-  mapId: string
+  mapId: ObjectId | string
   mapName?: string
   userId: ObjectId
   userName?: string
@@ -20,6 +20,7 @@ type Game = {
   difficulty?: 'Normal' | 'Easy' | 'Challenging'
   countryCode?: string
   challengeId?: ObjectId | string | null
+  onlineLobbyId?: ObjectId | string | null
   userDetails?: User
   createdAt?: Date
   mapDetails?: MapType
