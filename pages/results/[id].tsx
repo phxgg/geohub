@@ -35,7 +35,7 @@ const ResultsPage: PageType = () => {
     setGameData(game)
 
     if (game.mode === 'standard') {
-      fetchMap(game.mapId)
+      fetchMap(game.mapId as string)
     }
   }
 
