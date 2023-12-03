@@ -8,34 +8,76 @@ import { Meta } from '@components/Meta'
 import { useAppDispatch } from '@redux/hook'
 import { updateStartTime } from '@redux/slices'
 import StyledGamePage from '@styles/GamePage.Styled'
-import { OnlineLobbyType, GameViewType, PageType } from '@types'
+import { OnlineLobbyType, GameViewType, PageType, PlayerInLobbyType } from '@types'
 import { mailman, showToast } from '@utils/helpers'
 import { OnlineLobby } from '@components/OnlineLobby'
+import { useSession } from 'next-auth/react'
+import { io } from 'socket.io-client'
 
+/* TODO: 
+  - handle state of the lobby (waiting, playing, finished)
+    - waiting: players can join the lobby and click 'ready' button. When all players are ready, the game starts
+    - playing: players cannot join the lobby. When all players are finished, the game ends
+    - finished: players cannot join the lobby. Players can see the results of the game
+ */
+
+let socket: any;
 const OnlineLobbyPage: PageType = () => {
+  const session = useSession();
   const [view, setView] = useState<GameViewType>('Game')
   const [lobbyData, setLobbyData] = useState<OnlineLobbyType | null>()
   const [gameData, setGameData] = useState<Game | null>()
+  const [playersInLobby, setPlayersInLobby] = useState<PlayerInLobbyType[]>([])
 
   const router = useRouter()
   const lobbyId = router.query.id as string
   const dispatch = useAppDispatch()
 
-  const fetchChallenge = async () => {
+  const socketInitiation = async () => {
+    socket = io(process.env.NEXT_PUBLIC_WEBSOCKET_URL as string, {
+      transports: ['websocket'],
+      query: {
+        accessToken: session.status === 'authenticated' ? (session as any).data.accessToken : null
+      }
+    });
+
+    socket.on('connect', () => {
+      console.log('Connected to socket');
+    });
+
+    socket.on('disconnect', () => {
+      console.log('Disconnected from socket');
+    });
+
+    socket.on('update:lobby', (lobbyData: any) => {
+      console.log('update:lobby', lobbyData);
+      setPlayersInLobby(lobbyData.playersInLobby);
+    });
+  }
+
+  const fetchLobby = async () => {
     const res = await mailman(`online-lobbies/${lobbyId}`)
 
     const { lobbyBelongsToUser, playersGame, mapDetails } = res
 
-    // If challenge not found -> show error page
+    // If lobby not found -> show error page
     if (res.error) {
       return setLobbyData(null)
     }
 
     setLobbyData(res)
+    // If the user is authenticated, join the lobby and set up disconnect event
+    if (session.status === 'authenticated') {
+      socket.emit('join:lobby', { lobbyId: res._id });
+      socket.on('disconnect', () => {
+        socket.emit('leave:lobby', { lobbyId: res._id });
+      });
+    }
 
     // If the user has not started the challenge yet
     if (!playersGame) {
-      return lobbyBelongsToUser ? await createGame(res) : setView('Start')
+      // return lobbyBelongsToUser ? await createGame(res) : setView('Start')
+      return setView('Start');
     }
 
     // If they have finished the game, push to results page
@@ -71,14 +113,20 @@ const OnlineLobbyPage: PageType = () => {
     if (!lobbyId) {
       return
     }
-
+    // Initialize socket
+    socketInitiation();
+    // Fetch lobby data
     if (view === 'Game') {
-      fetchChallenge()
+      fetchLobby()
     }
-  }, [lobbyId])
+    // Disconnect socket
+    return () => {
+      socket.disconnect();
+    }
+  }, [lobbyId, session.status])
 
   if (view === 'Start' && lobbyData) {
-    return <OnlineLobby lobbyData={lobbyData} handleStartLobby={createGame} setView={setView} />
+    return <OnlineLobby lobbyData={lobbyData} handleStartLobby={createGame} setView={setView} playersInLobby={playersInLobby} socket={socket} />
   }
 
   if (lobbyData === null || gameData === null) {

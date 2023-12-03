@@ -7,22 +7,26 @@ import {
   ClockIcon,
   LocationMarkerIcon,
   SwitchHorizontalIcon,
+  UserGroupIcon,
   ZoomInIcon,
 } from '@heroicons/react/outline'
 import { useAppSelector } from '@redux/hook'
-import { OnlineLobbyType, GameViewType } from '@types'
+import { OnlineLobbyType, GameViewType, PlayerInLobbyType } from '@types'
 import { MAP_AVATAR_PATH } from '@utils/constants/random'
 import { formatTimeLimit, redirectToRegister } from '@utils/helpers'
 import { StyledOnlineLobby } from '.'
 import { OnlineLobby as OnlineLobbyInvite } from '@components/modals/GameSettingsModal/OnlineLobby'
+import Link from 'next/link'
 
 type Props = {
   lobbyData: OnlineLobbyType
   handleStartLobby: (lobbyData: OnlineLobbyType) => void
   setView: (view: GameViewType) => void
+  playersInLobby: PlayerInLobbyType[]
+  socket: any
 }
 
-const OnlineLobby: FC<Props> = ({ lobbyData, handleStartLobby, setView }) => {
+const OnlineLobby: FC<Props> = ({ lobbyData, handleStartLobby, setView, playersInLobby, socket }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(true)
   const user = useAppSelector((state) => state.user)
   const router = useRouter()
@@ -64,6 +68,11 @@ const OnlineLobby: FC<Props> = ({ lobbyData, handleStartLobby, setView }) => {
           <span>{lobbyData.mapDetails?.name}</span>
         </div>
 
+        <div className="returnHome">
+            <Link href="/">
+              <a>Return Home</a>
+            </Link>
+          </div>
         <div className="onlineLobbyContent">
           <h1 className="lobbyTitle">
             Online Lobby
@@ -117,9 +126,36 @@ const OnlineLobby: FC<Props> = ({ lobbyData, handleStartLobby, setView }) => {
 
           {CAN_ZOOM ? 'Zooming Allowed' : 'No Zoom'}
         </div>
+
+        {isLoggedIn && (
+          <div className="settingsItem">
+            <UserGroupIcon color="var(--green-300)" />
+            {playersInLobby.length} player{playersInLobby.length > 1 ? 's' : ''} in lobby
+          </div>
+        )}
       </div>
 
-      {/* TODO: Show players currently in lobby. Simultaneously start the game when all players are ready & the lobby creator clicks 'Start' */}
+      <div className="playersInLobby">
+        <h2>Players in Lobby</h2>
+        {isLoggedIn ? (
+          <ul>
+            {playersInLobby.map((player) => (
+              <li key={player.id}>
+                <Avatar
+                  type="user"
+                  src={player.avatar.emoji}
+                  backgroundColor={player.avatar.color}
+                />
+                <span>{player.name}</span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div className="notLoggedIn">
+            <span>Log in to see who{'\''}s in the lobby</span>
+          </div>
+        )}
+      </div>
     </StyledOnlineLobby>
   )
 }

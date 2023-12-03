@@ -111,6 +111,52 @@ const StyledOnlineLobby = styled.div<StyledProps>`
     flex-wrap: wrap;
   }
 
+  .playersInLobby {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 30px 10px;
+    flex-wrap: wrap;
+
+    ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+
+      li {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        width: 200px;
+        border: 1px solid #202020;
+        border-radius: 6px;
+        padding: 16px 0;
+        background-color: #252525;
+        font-size: 14px;
+
+        @media (max-width: 600px) {
+          width: 160px;
+          font-size: 12px;
+        }
+
+        svg {
+          height: 24px;
+
+          path {
+            stroke-width: 1.5;
+          }
+        }
+      }
+    }
+  }
+
   .settingsItem {
     display: flex;
     align-items: center;
@@ -134,6 +180,40 @@ const StyledOnlineLobby = styled.div<StyledProps>`
       path {
         stroke-width: 1.5;
       }
+    }
+  }
+
+  .notLoggedIn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    color: #888;
+    font-size: 14px;
+  }
+
+  .returnHome {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    padding: 8px 16px 8px 12px;
+    border-radius: 6px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #dcdcdc;
+    background-color: rgba(255, 255, 255, 0.05);
+    cursor: pointer;
+
+    svg {
+      height: 20px;
+      margin-right: 6px;
+    }
+
+    span {
+      margin-top: 2px;
     }
   }
 `

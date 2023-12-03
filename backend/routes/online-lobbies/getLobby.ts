@@ -30,7 +30,7 @@ const getLobby = async (req: NextApiRequest, res: NextApiResponse) => {
   if (userId) {
     playersGame = await collections.games?.findOne({
       userId: new ObjectId(userId),
-      challengeId: new ObjectId(lobbyId),
+      onlineLobbyId: new ObjectId(lobbyId),
     })
   }
 
