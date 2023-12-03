@@ -17,17 +17,19 @@ import { formatTimeLimit, redirectToRegister } from '@utils/helpers'
 import { StyledOnlineLobby } from '.'
 import { OnlineLobby as OnlineLobbyInvite } from '@components/modals/GameSettingsModal/OnlineLobby'
 import Link from 'next/link'
+import { Socket } from 'socket.io-client'
 
 type Props = {
   lobbyData: OnlineLobbyType
-  handleStartLobby: (lobbyData: OnlineLobbyType) => void
-  setView: (view: GameViewType) => void
+  // handleStartLobby: (ready: boolean) => void
+  // setView: (view: GameViewType) => void
   playersInLobby: PlayerInLobbyType[]
-  socket: any
+  socket: Socket
 }
 
-const OnlineLobby: FC<Props> = ({ lobbyData, handleStartLobby, setView, playersInLobby, socket }) => {
+const OnlineLobby: FC<Props> = ({ lobbyData, playersInLobby, socket }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(true)
+  const [ready, setReady] = useState(false)
   const user = useAppSelector((state) => state.user)
   const router = useRouter()
 
@@ -43,10 +45,10 @@ const OnlineLobby: FC<Props> = ({ lobbyData, handleStartLobby, setView, playersI
     }
   }, [])
 
-  const handleButtonClick = async () => {
+  const handleReadyClick = async () => {
     if (isLoggedIn) {
-      handleStartLobby(lobbyData)
-      setView('Game')
+      setReady(!ready)
+      socket.emit('player:ready', { lobbyId: lobbyData._id, ready: !ready });
     } else {
       redirectToRegister(router)
     }
@@ -69,10 +71,10 @@ const OnlineLobby: FC<Props> = ({ lobbyData, handleStartLobby, setView, playersI
         </div>
 
         <div className="returnHome">
-            <Link href="/">
-              <a>Return Home</a>
-            </Link>
-          </div>
+          <Link href="/">
+            <a>Return Home</a>
+          </Link>
+        </div>
         <div className="onlineLobbyContent">
           <h1 className="lobbyTitle">
             Online Lobby
@@ -92,8 +94,13 @@ const OnlineLobby: FC<Props> = ({ lobbyData, handleStartLobby, setView, playersI
             </div>
           </div>
 
-          <button className="lobbyBtn" onClick={() => handleButtonClick()}>
-            {isLoggedIn ? 'Play Game' : 'Create Account'}
+          <button className={`lobbyBtn ${ready ? 'isReady' : ''}`} onClick={() => handleReadyClick()}>
+            {!isLoggedIn && 'Create Account'}
+            {isLoggedIn && (
+              <>
+                {ready ? 'Ready' : 'Not Ready'}
+              </>
+            )}
           </button>
 
           {isLoggedIn && (

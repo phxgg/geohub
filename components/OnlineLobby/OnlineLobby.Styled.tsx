@@ -216,6 +216,14 @@ const StyledOnlineLobby = styled.div<StyledProps>`
       margin-top: 2px;
     }
   }
+
+  .isReady {
+    background-color: var(--green-500);
+    border: 1px solid var(--green-500);
+    :hover {
+      background-color: var(--green-600);
+    }
+  }
 `
 
 export default StyledOnlineLobby

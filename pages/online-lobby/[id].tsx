@@ -12,7 +12,7 @@ import { OnlineLobbyType, GameViewType, PageType, PlayerInLobbyType } from '@typ
 import { mailman, showToast } from '@utils/helpers'
 import { OnlineLobby } from '@components/OnlineLobby'
 import { useSession } from 'next-auth/react'
-import { io } from 'socket.io-client'
+import { Socket, io } from 'socket.io-client'
 
 /* TODO: 
   - handle state of the lobby (waiting, playing, finished)
@@ -21,7 +21,7 @@ import { io } from 'socket.io-client'
     - finished: players cannot join the lobby. Players can see the results of the game
  */
 
-let socket: any;
+let socket: Socket;
 const OnlineLobbyPage: PageType = () => {
   const session = useSession();
   const [view, setView] = useState<GameViewType>('Game')
@@ -48,10 +48,22 @@ const OnlineLobbyPage: PageType = () => {
     socket.on('disconnect', () => {
       console.log('Disconnected from socket');
     });
+  }
 
-    socket.on('update:lobby', (lobbyData: any) => {
-      console.log('update:lobby', lobbyData);
-      setPlayersInLobby(lobbyData.playersInLobby);
+  const setupSocketListeners = (res: any, skt: Socket) => {
+    skt.emit('join:lobby', { lobbyId: res._id });
+    skt.on('disconnect', () => {
+      skt.emit('leave:lobby', { lobbyId: res._id });
+    });
+    skt.on('update:lobby', async (data: any) => {
+      console.log('update:lobby', data);
+      setPlayersInLobby(data.playersInLobby);
+      // if all players in lobby are ready, start the game
+      if (data.allPlayersReady && !data.gameStarted) {
+        await createGame(res as OnlineLobbyType);
+        setView('Game');
+        skt.emit('start:game', { lobbyId: res._id });
+      }
     });
   }
 
@@ -68,10 +80,7 @@ const OnlineLobbyPage: PageType = () => {
     setLobbyData(res)
     // If the user is authenticated, join the lobby and set up disconnect event
     if (session.status === 'authenticated') {
-      socket.emit('join:lobby', { lobbyId: res._id });
-      socket.on('disconnect', () => {
-        socket.emit('leave:lobby', { lobbyId: res._id });
-      });
+      setupSocketListeners(res, socket);
     }
 
     // If the user has not started the challenge yet
@@ -126,7 +135,7 @@ const OnlineLobbyPage: PageType = () => {
   }, [lobbyId, session.status])
 
   if (view === 'Start' && lobbyData) {
-    return <OnlineLobby lobbyData={lobbyData} handleStartLobby={createGame} setView={setView} playersInLobby={playersInLobby} socket={socket} />
+    return <OnlineLobby lobbyData={lobbyData} playersInLobby={playersInLobby} socket={socket} />
   }
 
   if (lobbyData === null || gameData === null) {
