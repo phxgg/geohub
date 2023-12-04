@@ -18,6 +18,14 @@ const createLobbyGame = async (req: NextApiRequest, res: NextApiResponse) => {
     return throwError(res, 400, 'You have already played this lobby')
   }
 
+  // Ensure the lobby is in state 'waiting'
+  const lobby = await collections.onlineLobbies?.findOne({ _id: new ObjectId(lobbyId) })
+  if (!lobby) {
+    return throwError(res, 404, 'Lobby not found')
+  } else if (lobby.state !== 'waiting') {
+    return throwError(res, 400, 'This lobby is no longer accepting players')
+  }
+
   const newGame = {
     mapId: new ObjectId(mapId),
     userId: new ObjectId(userId),

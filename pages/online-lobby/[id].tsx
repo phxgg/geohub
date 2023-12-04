@@ -51,14 +51,13 @@ const OnlineLobbyPage: PageType = () => {
   }
 
   const setupSocketListeners = (res: any, skt: Socket) => {
-    skt.emit('join:lobby', { lobbyId: res._id });
     skt.on('disconnect', () => {
       skt.emit('leave:lobby', { lobbyId: res._id });
     });
     skt.on('update:lobby', async (data: any) => {
       console.log('update:lobby', data);
       setPlayersInLobby(data.playersInLobby);
-      // if all players in lobby are ready, start the game
+      // start the game if all players in lobby are ready & game has not started
       if (data.allPlayersReady && !data.gameStarted) {
         await createGame(res as OnlineLobbyType);
         setView('Game');
@@ -78,9 +77,10 @@ const OnlineLobbyPage: PageType = () => {
     }
 
     setLobbyData(res)
-    // If the user is authenticated, join the lobby and set up disconnect event
+    // If the user is authenticated, set up listeners and join the lobby
     if (session.status === 'authenticated') {
       setupSocketListeners(res, socket);
+      socket.emit('join:lobby', { lobbyId: res._id });
     }
 
     // If the user has not started the challenge yet
